@@ -1,0 +1,21 @@
+appId: com.gitbackup.app
+productName: GitBackup
+directories:
+  buildResources: resources
+  output: release
+files:
+  - dist
+  - dist-electron
+mac:
+  target: dmg
+  icon: resources/icon.png
+  category: public.app-category.developer-tools
+win:
+  target: nsis
+  icon: resources/icon.png
+linux:
+  target: AppImage
+  icon: resources/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
