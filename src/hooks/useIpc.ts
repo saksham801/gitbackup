@@ -1,22 +1,25 @@
 import { useEffect } from 'react'
 
-declare global {
-  interface Window {
-    api?: {
-      invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
-      on: (channel: string, callback: (...args: unknown[]) => void) => () => void
-    }
-  }
+type IpcApi = {
+  invoke: (channel: string, ...args: unknown[]) => Promise<unknown>
+  on: (channel: string, callback: (...args: unknown[]) => void) => () => void
 }
 
-const hasIpc = typeof window !== 'undefined' && typeof window.api !== 'undefined'
+const getIpcApi = (): IpcApi | undefined => {
+  if (typeof window === 'undefined') {
+    return undefined
+  }
+
+  return (window as Window & { api?: IpcApi }).api
+}
 
 export function ipcInvoke<T = unknown>(channel: string, ...args: unknown[]): Promise<T> {
-  if (!hasIpc) {
+  const api = getIpcApi()
+  if (!api) {
     return Promise.resolve(undefined as unknown as T)
   }
 
-  return window.api.invoke(channel, ...args) as Promise<T>
+  return api.invoke(channel, ...args) as Promise<T>
 }
 
 export function useIpcListener(
@@ -24,11 +27,12 @@ export function useIpcListener(
   callback: (...args: unknown[]) => void,
 ) {
   useEffect(() => {
-    if (!hasIpc) {
+    const api = getIpcApi()
+    if (!api) {
       return () => {}
     }
 
-    const unsubscribe = window.api.on(channel, callback)
+    const unsubscribe = api.on(channel, callback)
     return unsubscribe
   }, [channel, callback])
 }
