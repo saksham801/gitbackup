@@ -38,13 +38,25 @@ export function useSettings() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !window.api) {
+      setLoading(false)
+      return
+    }
+
     ipcInvoke<AppSettings>(IPC.SETTINGS_GET).then((s) => {
-      setSettings(s)
+      if (s) {
+        setSettings(s)
+      }
       setLoading(false)
     })
   }, [])
 
   const updateSettings = useCallback(async (partial: Partial<AppSettings>) => {
+    if (typeof window !== 'undefined' && !window.api) {
+      setSettings((prev) => ({ ...prev, ...partial }))
+      return
+    }
+
     await ipcInvoke(IPC.SETTINGS_SET, partial)
     setSettings((prev) => ({ ...prev, ...partial }))
   }, [])
