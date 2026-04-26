@@ -32,8 +32,11 @@ export class GitHubService {
     error?: string
   }> {
     try {
+      console.log('Validating GitHub token...')
       const { data, headers } = await this.octokit.rest.users.getAuthenticated()
+      console.log('GitHub user data:', data)
       const scopes = (headers['x-oauth-scopes'] || '').split(',').map((s: string) => s.trim())
+      console.log('Scopes:', scopes)
       return {
         valid: true,
         user: data.login,
@@ -45,6 +48,7 @@ export class GitHubService {
         scopes,
       }
     } catch (err: any) {
+      console.error('GitHub validation error:', err)
       return { valid: false, error: err.message }
     }
   }

@@ -27,13 +27,16 @@ export default function TokenInput({ token, onTokenChange }: Props) {
     if (!token.trim()) return
     setValidating(true)
     setStatus(null)
+    console.log('Validating token...')
     try {
       const result = await ipcInvoke<TokenValidation>(
         'github:validate-token',
         token,
       )
+      console.log('Validation result:', result)
       setStatus(result)
-    } catch {
+    } catch (error) {
+      console.error('Validation error:', error)
       setStatus({ valid: false, error: 'Failed to validate token' })
     } finally {
       setValidating(false)
