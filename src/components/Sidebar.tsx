@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useSettings } from '../hooks/useSettings'
+import { useAuth } from '../hooks/useAuth'
 
 const links = [
   {
@@ -43,7 +44,11 @@ const links = [
 
 export default function Sidebar() {
   const { settings } = useSettings()
+  const { user, logout } = useAuth()
   const isReady = settings.githubToken && settings.backupPath
+  const authEnabled = settings.supabaseAuth.enabled
+  const authStatus = authEnabled ? (user ? 'Authenticated' : 'Login required') : 'Optional'
+  const authStatusClass = authEnabled ? (user ? 'text-green-400' : 'text-yellow-400') : 'text-gray-400'
 
   return (
     <aside className="w-60 border-r border-gray-800/80 bg-[#0d1117] flex flex-col">
@@ -113,6 +118,28 @@ export default function Sidebar() {
               </p>
             </div>
           </div>
+        </div>
+      </div>
+      <div className="px-3 pb-3">
+        <div className="p-3 rounded-lg border border-gray-800 bg-[#0d1117] text-[11px] text-gray-400">
+          <div className="flex items-center justify-between gap-3">
+            <span className={authStatusClass}>{authStatus}</span>
+            {user ? (
+              <button
+                type="button"
+                onClick={logout}
+                className="text-[11px] text-orange-400 hover:text-orange-300"
+              >
+                Logout
+              </button>
+            ) : null}
+          </div>
+          {authEnabled && !user ? (
+            <p className="mt-2 text-[10px] text-yellow-400">Supabase login is required to access the app.</p>
+          ) : null}
+          {!authEnabled ? (
+            <p className="mt-2 text-[10px] text-gray-500">Supabase auth is optional.</p>
+          ) : null}
         </div>
       </div>
 

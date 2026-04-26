@@ -1,8 +1,9 @@
 export interface AppSettings {
   githubToken: string
   backupPath: string
-  cloudProvider: 's3' | 'r2' | 'none'
+  cloudProvider: 's3' | 'r2' | 'supabase' | 'none'
   cloudConfig: CloudConfig
+  supabaseAuth: SupabaseAuthConfig
   repoFilters: RepoFilterSet
   selectedRepoIds: number[]
   schedule: ScheduleConfig
@@ -11,11 +12,20 @@ export interface AppSettings {
 
 export interface CloudConfig {
   bucket: string
-  region: string
-  accessKeyId: string
-  secretAccessKey: string
+  region?: string
+  accessKeyId?: string
+  secretAccessKey?: string
   endpoint?: string
   pathPrefix?: string
+  projectUrl?: string
+  anonKey?: string
+}
+
+export interface SupabaseAuthConfig {
+  enabled: boolean
+  projectUrl: string
+  anonKey: string
+  allowedEmail: string
 }
 
 export interface RepoFilterSet {

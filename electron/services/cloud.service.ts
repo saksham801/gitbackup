@@ -1,15 +1,27 @@
-import { S3Client, HeadBucketCommand, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import fs from 'fs'
-import path from 'path'
 import type { CloudConfig } from '../../src/types'
 
 export class CloudService {
-  private client: S3Client
+  private client: S3Client | null = null
+  private supabase: SupabaseClient | null = null
   private bucket: string
   private pathPrefix: string
 
-  constructor(provider: 's3' | 'r2', config: CloudConfig) {
+  constructor(provider: 's3' | 'r2' | 'supabase', config: CloudConfig) {
+    this.bucket = config.bucket
+    this.pathPrefix = config.pathPrefix || ''
+
+    if (provider === 'supabase') {
+      if (!config.projectUrl || !config.anonKey) {
+        throw new Error('Supabase project URL and anon key are required')
+      }
+      this.supabase = createClient(config.projectUrl, config.anonKey)
+      return
+    }
+
     const clientConfig: any = {
       credentials: {
         accessKeyId: config.accessKeyId,
@@ -24,13 +36,20 @@ export class CloudService {
     }
 
     this.client = new S3Client(clientConfig)
-    this.bucket = config.bucket
-    this.pathPrefix = config.pathPrefix || ''
   }
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }))
+      if (this.supabase) {
+        const { error } = await this.supabase.storage.from(this.bucket).list('', {
+          limit: 1,
+          offset: 0,
+        })
+        if (error) throw error
+        return { success: true, message: `Connected to Supabase bucket "${this.bucket}"` }
+      }
+
+      await this.client!.send(new HeadBucketCommand({ Bucket: this.bucket }))
       return { success: true, message: `Connected to bucket "${this.bucket}"` }
     } catch (err: any) {
       if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
@@ -53,8 +72,21 @@ export class CloudService {
       ? `${this.pathPrefix.replace(/\/$/, '')}/${key}`
       : key
 
+    if (this.supabase) {
+      const fileBuffer = fs.readFileSync(filePath)
+      const { error } = await this.supabase.storage.from(this.bucket).upload(fullKey, fileBuffer, {
+        contentType: 'application/gzip',
+        upsert: true,
+      })
+      if (error) {
+        throw new Error(error.message)
+      }
+      onProgress?.(100)
+      return
+    }
+
     const upload = new Upload({
-      client: this.client,
+      client: this.client!,
       params: {
         Bucket: this.bucket,
         Key: fullKey,

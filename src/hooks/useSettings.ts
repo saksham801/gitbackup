@@ -16,6 +16,16 @@ const defaultSettings: AppSettings = {
     region: 'us-east-1',
     accessKeyId: '',
     secretAccessKey: '',
+    endpoint: '',
+    pathPrefix: '',
+    projectUrl: '',
+    anonKey: '',
+  },
+  supabaseAuth: {
+    enabled: false,
+    projectUrl: '',
+    anonKey: '',
+    allowedEmail: '',
   },
   repoFilters: {
     owned: true,

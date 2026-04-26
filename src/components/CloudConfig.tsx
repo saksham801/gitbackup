@@ -3,9 +3,9 @@ import { ipcInvoke } from '../hooks/useIpc'
 import type { CloudConfig as CloudConfigType } from '../types'
 
 interface Props {
-  provider: 's3' | 'r2' | 'none'
+  provider: 's3' | 'r2' | 'supabase' | 'none'
   config: CloudConfigType
-  onProviderChange: (provider: 's3' | 'r2' | 'none') => void
+  onProviderChange: (provider: 's3' | 'r2' | 'supabase' | 'none') => void
   onConfigChange: (config: CloudConfigType) => void
 }
 
@@ -36,6 +36,14 @@ const providers = [
       <svg className="w-6 h-6 text-orange-400" viewBox="0 0 24 24" fill="currentColor">
         <path d="M16.066 19.984h-9.98c-.055 0-.107-.022-.146-.06a.209.209 0 01-.06-.146c0-.054.021-.107.06-.146a.207.207 0 01.146-.06h9.98c.055 0 .107.021.146.06.039.039.061.092.061.146s-.022.107-.06.146a.207.207 0 01-.147.06zM19.5 12c0 4.142-3.358 7.5-7.5 7.5S4.5 16.142 4.5 12 7.858 4.5 12 4.5s7.5 3.358 7.5 7.5z" />
       </svg>
+    ),
+  },
+  {
+    id: 'supabase' as const,
+    name: 'Supabase',
+    desc: 'Supabase S3-compatible storage',
+    icon: (
+      <span className="text-[11px] font-bold text-sky-400 leading-none">sb</span>
     ),
   },
 ]
@@ -132,13 +140,31 @@ export default function CloudConfig({
             />
           )}
 
-          {provider === 's3' && (
+          {(provider === 's3' || provider === 'r2') && (
             <InputField
-              label="Region"
-              value={config.region}
-              onChange={(v) => updateField('region', v)}
-              placeholder="us-east-1"
+              label={provider === 's3' ? 'Region' : 'R2 Endpoint URL'}
+              value={provider === 's3' ? config.region || '' : config.endpoint || ''}
+              onChange={(v) => updateField(provider === 's3' ? 'region' : 'endpoint', v)}
+              placeholder={provider === 's3' ? 'us-east-1' : 'https://<account-id>.r2.cloudflarestorage.com'}
             />
+          )}
+
+          {provider === 'supabase' && (
+            <>
+              <InputField
+                label="Supabase Project URL"
+                value={config.projectUrl || ''}
+                onChange={(v) => updateField('projectUrl', v)}
+                placeholder="https://xyzcompany.supabase.co"
+              />
+              <InputField
+                label="Supabase Anon Key"
+                value={config.anonKey || ''}
+                onChange={(v) => updateField('anonKey', v)}
+                placeholder="public-anon-key"
+                type="password"
+              />
+            </>
           )}
 
           <InputField
@@ -150,14 +176,14 @@ export default function CloudConfig({
 
           <InputField
             label="Access Key ID"
-            value={config.accessKeyId}
+            value={config.accessKeyId || ''}
             onChange={(v) => updateField('accessKeyId', v)}
             placeholder="AKIA..."
           />
 
           <InputField
             label="Secret Access Key"
-            value={config.secretAccessKey}
+            value={config.secretAccessKey || ''}
             onChange={(v) => updateField('secretAccessKey', v)}
             placeholder=""
             type="password"
@@ -173,7 +199,13 @@ export default function CloudConfig({
           <div className="flex items-center gap-3 pt-1">
             <button
               onClick={testConnection}
-              disabled={testing || !config.bucket || !config.accessKeyId}
+              disabled={testing || !config.bucket || (
+                provider === 's3' && !config.accessKeyId) ||
+                (provider === 's3' && !config.secretAccessKey) ||
+                (provider === 'r2' && !config.accessKeyId) ||
+                (provider === 'r2' && !config.secretAccessKey) ||
+                (provider === 'supabase' && (!config.projectUrl || !config.anonKey))
+              }
               className="px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/50 disabled:text-gray-600 rounded-lg text-xs font-medium transition-colors text-gray-300"
             >
               {testing ? 'Testing...' : 'Test Connection'}

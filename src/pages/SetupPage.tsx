@@ -3,6 +3,7 @@ import { useSettings } from '../hooks/useSettings'
 import TokenInput from '../components/TokenInput'
 import BackupFolderPicker from '../components/BackupFolderPicker'
 import CloudConfig from '../components/CloudConfig'
+import SupabaseAuthConfig from '../components/SupabaseAuthConfig'
 
 export default function SetupPage() {
   const { settings, updateSettings, loading } = useSettings()
@@ -41,6 +42,11 @@ export default function SetupPage() {
           config={settings.cloudConfig}
           onProviderChange={(cloudProvider) => updateSettings({ cloudProvider })}
           onConfigChange={(cloudConfig) => updateSettings({ cloudConfig })}
+        />
+
+        <SupabaseAuthConfig
+          config={settings.supabaseAuth}
+          onConfigChange={(supabaseAuth) => updateSettings({ supabaseAuth })}
         />
 
         {isReady && (
