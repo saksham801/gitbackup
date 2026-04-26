@@ -1,7 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js'
+import { createContext, useContext, useEffect, useMemo, useState, createElement, type ReactNode } from 'react'
 import { useSettings } from './useSettings'
 import type { SupabaseAuthConfig } from '../types'
+
+type User = {
+  email: string | null
+  [key: string]: unknown
+}
 
 interface AuthContextValue {
   user: User | null
@@ -14,15 +18,6 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 const STORAGE_KEY = 'gitbackup-supabase-user'
-
-function createSupabaseClient(config: SupabaseAuthConfig): SupabaseClient {
-  return createClient(config.projectUrl, config.anonKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  })
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { settings, loading } = useSettings()
@@ -66,18 +61,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!projectUrl || !anonKey) {
       throw new Error('Supabase auth is not configured')
     }
-    const supabase = createSupabaseClient(settings.supabaseAuth)
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+
+    const authUrl = new URL('/auth/v1/token?grant_type=password', projectUrl).toString()
+    const response = await fetch(authUrl, {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${anonKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
     })
-    if (error || !data.session?.user) {
-      throw new Error(error?.message || 'Supabase sign in failed')
+
+    const result = await response.json().catch(() => null)
+    if (!response.ok || !result?.user) {
+      throw new Error(result?.error_description || result?.error || 'Supabase sign in failed')
     }
 
-    const signedUser = data.session.user
+    const signedUser = result.user as User
     if (allowedEmail && signedUser.email !== allowedEmail) {
-      await supabase.auth.signOut()
       throw new Error('User is not authorized to access this app')
     }
 
@@ -90,10 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem(STORAGE_KEY)
   }
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout, authReady, authRequired }}>
-      {children}
-    </AuthContext.Provider>
+  return createElement(
+    AuthContext.Provider,
+    { value: { user, login, logout, authReady, authRequired } },
+    children,
   )
 }
 

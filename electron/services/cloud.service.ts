@@ -1,14 +1,15 @@
 import { S3Client, HeadBucketCommand } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import fs from 'fs'
+import path from 'path'
 import type { CloudConfig } from '../../src/types'
 
 export class CloudService {
   private client: S3Client | null = null
-  private supabase: SupabaseClient | null = null
   private bucket: string
   private pathPrefix: string
+  private supabaseProjectUrl?: string
+  private supabaseAnonKey?: string
 
   constructor(provider: 's3' | 'r2' | 'supabase', config: CloudConfig) {
     this.bucket = config.bucket
@@ -18,7 +19,8 @@ export class CloudService {
       if (!config.projectUrl || !config.anonKey) {
         throw new Error('Supabase project URL and anon key are required')
       }
-      this.supabase = createClient(config.projectUrl, config.anonKey)
+      this.supabaseProjectUrl = config.projectUrl
+      this.supabaseAnonKey = config.anonKey
       return
     }
 
@@ -40,12 +42,23 @@ export class CloudService {
 
   async testConnection(): Promise<{ success: boolean; message: string }> {
     try {
-      if (this.supabase) {
-        const { error } = await this.supabase.storage.from(this.bucket).list('', {
-          limit: 1,
-          offset: 0,
+      if (this.supabaseProjectUrl && this.supabaseAnonKey) {
+        const url = new URL(`/storage/v1/object/${encodeURIComponent(this.bucket)}`, this.supabaseProjectUrl)
+        url.searchParams.set('limit', '1')
+        url.searchParams.set('offset', '0')
+
+        const response = await fetch(url.toString(), {
+          headers: {
+            apikey: this.supabaseAnonKey,
+            Authorization: `Bearer ${this.supabaseAnonKey}`,
+          },
         })
-        if (error) throw error
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => null)
+          throw new Error(result?.message || response.statusText || 'Supabase storage connection failed')
+        }
+
         return { success: true, message: `Connected to Supabase bucket "${this.bucket}"` }
       }
 
@@ -72,15 +85,29 @@ export class CloudService {
       ? `${this.pathPrefix.replace(/\/$/, '')}/${key}`
       : key
 
-    if (this.supabase) {
+    if (this.supabaseProjectUrl && this.supabaseAnonKey) {
+      const uploadUrl = new URL(`/storage/v1/object/${encodeURIComponent(this.bucket)}`, this.supabaseProjectUrl)
+      uploadUrl.searchParams.set('path', fullKey)
+      uploadUrl.searchParams.set('upsert', 'true')
+
       const fileBuffer = fs.readFileSync(filePath)
-      const { error } = await this.supabase.storage.from(this.bucket).upload(fullKey, fileBuffer, {
-        contentType: 'application/gzip',
-        upsert: true,
+      const formData = new FormData()
+      formData.append('file', new Blob([fileBuffer]), path.basename(filePath))
+
+      const response = await fetch(uploadUrl.toString(), {
+        method: 'POST',
+        headers: {
+          apikey: this.supabaseAnonKey,
+          Authorization: `Bearer ${this.supabaseAnonKey}`,
+        },
+        body: formData,
       })
-      if (error) {
-        throw new Error(error.message)
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.message || response.statusText || 'Supabase upload failed')
       }
+
       onProgress?.(100)
       return
     }
