@@ -8,7 +8,7 @@ import SettingsPage from './pages/SettingsPage'
 import LoginPage from './pages/LoginPage'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 
-function RequireAuth({ children }: { children: JSX.Element }) {
+function RequireAuth({ children }: { children: React.ReactElement }) {
   const { authReady, authRequired, user } = useAuth()
 
   if (!authReady) {
