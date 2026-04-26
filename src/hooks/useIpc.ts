@@ -15,11 +15,7 @@ const getIpcApi = (): IpcApi | undefined => {
 
 export function ipcInvoke<T = unknown>(channel: string, ...args: unknown[]): Promise<T> {
   const api = getIpcApi()
-  if (!api) {
-    return Promise.resolve(undefined as unknown as T)
-  }
-
-  return api.invoke(channel, ...args) as Promise<T>
+  return (api?.invoke(channel, ...args) as Promise<T>) ?? Promise.resolve(undefined as unknown as T)
 }
 
 export function useIpcListener(
