@@ -14,6 +14,7 @@
     "package:mac": "npm run build:electron && electron-builder --mac",
     "package:win": "npm run build:electron && electron-builder --win",
     "package:linux": "npm run build:electron && electron-builder --linux",
+    "deploy": "npm run build:web && npx wrangler deploy",
     "deploy:web": "npm run build:web && npx wrangler pages publish dist --project-name gitbackup",
     "typecheck": "tsc --noEmit"
   },
@@ -50,6 +51,7 @@
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3",
     "vite": "^8.0.10",
-    "vite-plugin-electron": "^0.29.1"
+    "vite-plugin-electron": "^0.29.1",
+    "@cloudflare/kv-asset-handler": "^0.2.0"
   }
 }

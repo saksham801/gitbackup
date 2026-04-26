@@ -1,6 +1,6 @@
 name = "gitbackup"
 compatibility_date = "2026-04-26"
-type = "javascript"
+main = "workers-site/index.js"
 
 [build]
 command = "npm run build:web"
