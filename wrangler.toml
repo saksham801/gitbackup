@@ -1,0 +1,9 @@
+name = "gitbackup"
+compatibility_date = "2026-04-26"
+type = "javascript"
+
+[build]
+command = "npm run build:web"
+
+[site]
+bucket = "./dist"
