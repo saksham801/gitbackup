@@ -17,6 +17,7 @@ export function registerSchedulerHandlers(mainWindow: BrowserWindow) {
       backupPath: store.get('backupPath'),
       cloudProvider: store.get('cloudProvider'),
       cloudConfig: store.get('cloudConfig'),
+      supabaseAuth: store.get('supabaseAuth'),
       repoFilters: store.get('repoFilters'),
       selectedRepoIds: store.get('selectedRepoIds'),
       schedule: store.get('schedule'),
